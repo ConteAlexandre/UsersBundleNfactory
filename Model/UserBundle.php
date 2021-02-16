@@ -1,12 +1,14 @@
 <?php
 
-namespace App\UsersBundleNfactory\Entity;
+namespace App\UsersBundleNfactory\Model;
 
+use App\UsersBundleNfactory\Model\Traits\EnabledEntityTrait;
 use Doctrine\ORM\Mapping as ORM;
 use Gedmo\Blameable\Traits\BlameableEntity;
 use Gedmo\Mapping\Annotation as Gedmo;
 use Gedmo\Timestampable\Traits\TimestampableEntity;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Class UserBundle
@@ -16,12 +18,21 @@ use Symfony\Component\Security\Core\User\UserInterface;
 abstract class UserBundle implements UserInterface
 {
     use TimestampableEntity,
-        BlameableEntity;
+        BlameableEntity,
+        EnabledEntityTrait;
 
     /**
      * @var string
      *
-     * @ORM\Column(name="username", type="string")
+     * @Assert\NotBlank()
+     * @Assert\Length(
+     *     min=4,
+     *     minMessage="The username must be do {{ limit }} characters",
+     *     max=80,
+     *     maxMessage="The username must not be do {{ limit }} characters",
+     * )
+     *
+     * @ORM\Column(name="username", type="string", length=80)
      */
     protected $username;
 
@@ -35,28 +46,41 @@ abstract class UserBundle implements UserInterface
     /**
      * @var string
      *
-     * @ORM\Column(name="email", type="string")
+     * @Assert\NotBlank()
+     * @Assert\Email()
+     *
+     * @ORM\Column(name="email", type="string", length=150)
      */
     protected $email;
 
     /**
      * @var string
      *
-     * @ORM\Column(name="password", type="string")
+     * @ORM\Column(name="password", type="string", length=255)
      */
     protected $password;
 
     /**
      * @var string
      *
-     * @ORM\Column(name="salt", type="string")
+     * @Assert\Regex(
+     *     pattern="^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&-+=()])(?=\\S+$).{8}$”,
+     *     message="The password must do contains minimum one number, one lower case, one upper case and minimum 8 characters"
+     * )
+     */
+    protected $plainPassword;
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="salt", type="string", length=255)
      */
     protected $salt;
 
     /**
      * @var string
      *
-     * @ORM\Column(name="reset_token", type="string", nullable=true)
+     * @ORM\Column(name="reset_token", type="string", length=255, nullable=true)
      */
     protected $resetToken;
 
@@ -70,7 +94,7 @@ abstract class UserBundle implements UserInterface
     /**
      * @var array
      *
-     * @ORM\Column(name="roles", type="array")
+     * @ORM\Column(name="roles", type="json")
      */
     protected $roles = [];
 
@@ -135,6 +159,14 @@ abstract class UserBundle implements UserInterface
     }
 
     /**
+     * @return string
+     */
+    public function getPlainPassword(): string
+    {
+        return $this->plainPassword;
+    }
+
+    /**
      * @return string|null
      */
     public function getResetToken(): ?string
@@ -179,7 +211,10 @@ abstract class UserBundle implements UserInterface
      */
     public function getRoles(): ?array
     {
-        return $this->roles;
+        $roles = $this->roles;
+        $roles[] = 'ROLE_USER';
+
+        return array_unique($roles);
     }
 
     /**
@@ -199,7 +234,7 @@ abstract class UserBundle implements UserInterface
      */
     public function eraseCredentials()
     {
-        // TODO: Implement eraseCredentials() method.
+        $this->plainPassword = null;
     }
 
     /**
