@@ -28,6 +28,6 @@ class UsersBundleController extends AbstractController
      */
     public function test()
     {
-        return $this->render('test.html.twig');
+        return $this->render('@UsersTest/test.html.twig');
     }
 }
